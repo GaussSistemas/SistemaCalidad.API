@@ -1,0 +1,5 @@
+@SistemaDeCalidad.API_HostAddress = http://localhost:5084
+
+GET {{SistemaDeCalidad.API_HostAddress}}/api/encuesta/
+Accept: application/json
+###
