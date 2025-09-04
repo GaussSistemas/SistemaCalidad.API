@@ -20,5 +20,6 @@ namespace SistemaDeCalidad.API.Interfaces.Services
         public Task EliminarEncuestas(List<int> ids);
         public Task EliminarPreguntas(List<int> ids);
         public Task EliminarOpciones(List<int> ids);
+        public Task AgregarRespuestaEncuesta(EncuestaRespuesta respuesta);
     }
 }

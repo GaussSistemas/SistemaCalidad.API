@@ -93,6 +93,30 @@ namespace SistemaDeCalidad.API.Controllers
 
         }
 
+        [HttpPut("Respuesta", Name = "Respuesta encuesta")]
+        public async Task<ActionResult> PutRespuesta([FromBody] EncuestaRespuestaInput respuestaInput)
+        {
+            try
+            {
+                var respuesta = _mapper.Map<EncuestaRespuesta>(respuestaInput);
+                await _service.AgregarRespuestaEncuesta(respuesta);
+                return Ok();
+            }
+            catch (ArgumentNullException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (BadHttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (IOException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+        }
+
         [HttpPut(Name = "Modificar encuesta")]
         public async Task<ActionResult> UpdateEncuesta(int idEncuesta, [FromBody] EncuestaInput encuestaInput)
         {

@@ -197,7 +197,7 @@ namespace SistemaDeCalidad.API.Services
         {
 
             var columnasUpdate = string.Join(", ", parametros.Select(parametro => $"{parametro.column} = {parametro.value}").ToList());
-            var filtrosUpdate = string.Join("AND ", filtros.Select(filtro => $"{filtro.column} = {filtro.value}").ToList());
+            var filtrosUpdate = string.Join(" AND ", filtros.Select(filtro => $"{filtro.column} = {filtro.value}").ToList());
             var statement = $"UPDATE {tabla} SET {columnasUpdate} WHERE {filtrosUpdate}";
             
             return (statement, new List<(string, object, OdbcType)>());

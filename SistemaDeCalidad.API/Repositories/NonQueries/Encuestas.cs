@@ -138,6 +138,25 @@ namespace SistemaDeCalidad.API.Repositories.NonQueries
             return (opcion.NombreTabla(), parametros, filtros);
         }
 
+        public static (string tabla, List<(string, object)> parametros, List<(string, object)> filtros) ParametrosUpdateRespuestaPregunta(EncuestaRespuestaPregunta respuesta)
+        {
+            var parametros = new List<(string, object)>()
+            {
+                ("EncuestaPreguntaOpcionId", $"{respuesta.EncuestaPreguntaOpcionId}"),
+                ("Valor", $"'{respuesta.Valor}'"),
+            };
+
+            var filtros = new List<(string, object)>()
+            {
+                ("Hash", $"'{respuesta.Hash}'"),
+                ("Id", respuesta.Id),
+                ("EncuestaPreguntaId", respuesta.EncuestaPreguntaId)  
+            };
+
+            return (respuesta.NombreTabla(), parametros, filtros);
+        }
+
+
         public static (string tabla, List<(string, object)> filtros) ParametrosDeleteEncuesta(Encuesta encuesta)
         {
             var filtros = new List<(string, object)>()

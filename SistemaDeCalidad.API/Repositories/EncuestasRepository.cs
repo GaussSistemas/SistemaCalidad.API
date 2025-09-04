@@ -110,6 +110,32 @@ namespace SistemaDeCalidad.API.Repositories
             return controles;
         }
 
+        public EncuestaRespuestaPregunta RespuestaPregunta(string hash, int preguntaId)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.RespuestaContestada(hash, preguntaId),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var respuesta = EiffelService.SendToDBFDatabase<EncuestaRespuestaPregunta>(queryExecutor);
+            return respuesta;
+        }
+
+        public EncuestaPregunta UltimaPreguntaEncuesta(int encuestaId)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.UltimaPreguntaEncuesta(encuestaId),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var pregunta = EiffelService.SendToDBFDatabase<EncuestaPregunta>(queryExecutor);
+            return pregunta;
+        }
+
         public bool EncuestaContestada(string id)
         {
             var queryExecutor = new QueryExecutor()
@@ -140,6 +166,7 @@ namespace SistemaDeCalidad.API.Repositories
 
         public bool GrabarRespuesta(EncuestaRespuesta respuestaEncuesta, string tipoId, int numero)
         {
+            var ultimaPregunta = UltimaPreguntaEncuesta(respuestaEncuesta.EncuestaId);
             var idCabecera = ProximoId(respuestaEncuesta.NombreTabla());
 
             var parametros = new List<(string tabla, List<(String, Object, OdbcType)> parametros)>();
@@ -155,22 +182,65 @@ namespace SistemaDeCalidad.API.Repositories
 
                 parametros.Add(NonQueries.Encuestas.ParametrosRespuestaPregunta(idRespuestaPregunta, respuestaEncuesta.Hash, respuestaPregunta));
             }
-            
-            var log = new EncuestaLog() {
-                UsuarioId = "AUT", 
-                EstadoId = "FIN", 
-                Observacion = "ENCUESTA FINALIZADA", 
-                Fecha = DateTime.Now, 
-                Hora = DateTime.Now.ToString("HH:mm:ss"), 
-                Numero = numero, 
-                SoporteId = tipoId 
-            };
-            parametros.Add(NonQueries.Encuestas.ParametrosLog(log));
-            
+
+            if(ultimaPregunta != null && respuestaEncuesta.RespuestasPreguntas.Any(rp => rp.EncuestaPreguntaId == ultimaPregunta.Id))
+                parametros.Add(GrabarLog(tipoId, numero));
+
             var statements = EiffelService.ArmarStatements(parametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
             var resultado = EiffelService.SendTransactionToDBFDatabase(statements, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
 
             return resultado;
+        }
+
+        public bool ActualizarRespuesta(EncuestaRespuesta respuestaEncuesta, string tipoId, int numero)
+        {
+            var ultimaPregunta = UltimaPreguntaEncuesta(respuestaEncuesta.EncuestaId);
+
+            var statements = new List<(string statement, List<(string, object, OdbcType)> parametros)>();
+            var resultado = false;
+            var preguntaContestada = RespuestaPregunta(respuestaEncuesta.Hash, respuestaEncuesta.RespuestasPreguntas.First().EncuestaPreguntaId);
+
+            if (preguntaContestada != null)
+            {
+                var parametrosUpdate = new List<(string tabla, List<(String, Object)> parametros, List<(String, Object)> filtros)>();
+                preguntaContestada.EncuestaPreguntaOpcionId = respuestaEncuesta.RespuestasPreguntas.First().EncuestaPreguntaOpcionId;
+                preguntaContestada.Valor = respuestaEncuesta.RespuestasPreguntas.First().Valor;
+                parametrosUpdate.Add(NonQueries.Encuestas.ParametrosUpdateRespuestaPregunta(preguntaContestada));
+                statements = EiffelService.ArmarStatementUpdate(parametrosUpdate, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
+            }
+            else
+            {
+                var parametros = new List<(string tabla, List<(String, Object, OdbcType)> parametros)>();
+                var idRespuestaPregunta = ProximoId(respuestaEncuesta.RespuestasPreguntas.First().NombreTabla());
+                parametros.Add(NonQueries.Encuestas.ParametrosRespuestaPregunta(idRespuestaPregunta, respuestaEncuesta.Hash, respuestaEncuesta.RespuestasPreguntas.First()));
+                statements = EiffelService.ArmarStatements(parametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
+            }
+
+            if (ultimaPregunta != null && respuestaEncuesta.RespuestasPreguntas.Any(rp => rp.EncuestaPreguntaId == ultimaPregunta.Id))
+            {
+                var logParametros = new List<(string tabla, List<(String, Object, OdbcType)> parametros)>();
+                logParametros.Add(GrabarLog(tipoId, numero));
+                var logStatement = EiffelService.ArmarStatements(logParametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
+                statements.AddRange(logStatement);
+            }
+
+            resultado = EiffelService.SendTransactionToDBFDatabase(statements, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
+            return resultado;
+        }
+
+        public (string tabla, List<(String, Object, OdbcType)> parametros) GrabarLog(string tipoId, int numero)
+        {
+            var log = new EncuestaLog()
+            {
+                UsuarioId = "AUT",
+                EstadoId = "FIN",
+                Observacion = "ENCUESTA FINALIZADA",
+                Fecha = DateTime.Now,
+                Hora = DateTime.Now.ToString("HH:mm:ss"),
+                Numero = numero,
+                SoporteId = tipoId
+            };
+            return NonQueries.Encuestas.ParametrosLog(log);
         }
 
         public bool GrabarEncuesta(Encuesta encuesta)
@@ -271,7 +341,6 @@ namespace SistemaDeCalidad.API.Repositories
             else
                 return 1;
         }
-
 
         public bool ActualizarPregunta(EncuestaPregunta pregunta)
         {

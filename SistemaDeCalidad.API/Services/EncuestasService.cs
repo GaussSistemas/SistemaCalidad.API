@@ -41,6 +41,28 @@ namespace SistemaDeCalidad.API.Services
             return;
         }
 
+        public async Task AgregarRespuestaEncuesta(EncuestaRespuesta respuesta)
+        {
+            if (respuesta == null)
+                throw new ArgumentNullException("La respuesta no puede estar vacía");
+
+            var soporte = await _soportesService.GetSoporte(respuesta.Hash);
+            if (soporte == null)
+                throw new BadHttpRequestException("El soporte asociado a la encuesta no existe.");
+
+            var encuesta = _encuestasRepository.EncuestaSegunId(respuesta.EncuestaId);
+            if (encuesta == null)
+                throw new BadHttpRequestException("La encuesta no existe.");
+
+            if (respuesta?.RespuestasPreguntas == null || respuesta?.RespuestasPreguntas.Count == 0)
+                throw new BadHttpRequestException("La respuesta debe contar con al menos una respuesta de pregunta.");
+
+            var resultado = _encuestasRepository.ActualizarRespuesta(respuesta, soporte.TipoId, (int)soporte.Numero);
+            if (!resultado)
+                throw new IOException("No se pudo insertar la respuesta en la base de datos.");
+
+            return;
+        }
         public async Task GrabarEncuesta(Encuesta encuesta)
         {
             if (encuesta == null)
