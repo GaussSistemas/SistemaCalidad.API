@@ -183,7 +183,7 @@ namespace SistemaDeCalidad.API.Repositories
                 parametros.Add(NonQueries.Encuestas.ParametrosRespuestaPregunta(idRespuestaPregunta, respuestaEncuesta.Hash, respuestaPregunta));
             }
 
-            if(ultimaPregunta != null && respuestaEncuesta.RespuestasPreguntas.Any(rp => rp.EncuestaPreguntaId == ultimaPregunta.Id))
+            if (ultimaPregunta != null && respuestaEncuesta.RespuestasPreguntas.Any(rp => rp.EncuestaPreguntaId == ultimaPregunta.Id))
                 parametros.Add(GrabarLog(tipoId, numero));
 
             var statements = EiffelService.ArmarStatements(parametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
@@ -198,30 +198,32 @@ namespace SistemaDeCalidad.API.Repositories
 
             var statements = new List<(string statement, List<(string, object, OdbcType)> parametros)>();
             var resultado = false;
-            var preguntaContestada = RespuestaPregunta(respuestaEncuesta.Hash, respuestaEncuesta.RespuestasPreguntas.First().EncuestaPreguntaId);
+            foreach (var respuesta in respuestaEncuesta.RespuestasPreguntas)
+            {
+                var preguntaContestada = RespuestaPregunta(respuestaEncuesta.Hash, respuesta.EncuestaPreguntaId);
+                if (preguntaContestada != null)
+                {
+                    var parametrosUpdate = new List<(string tabla, List<(String, Object)> parametros, List<(String, Object)> filtros)>();
+                    preguntaContestada.EncuestaPreguntaOpcionId = respuesta.EncuestaPreguntaOpcionId;
+                    preguntaContestada.Valor = respuesta.Valor;
+                    parametrosUpdate.Add(NonQueries.Encuestas.ParametrosUpdateRespuestaPregunta(preguntaContestada));
+                    statements = EiffelService.ArmarStatementUpdate(parametrosUpdate, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
+                }
+                else
+                {
+                    var parametros = new List<(string tabla, List<(String, Object, OdbcType)> parametros)>();
+                    var idRespuestaPregunta = ProximoId(respuesta.NombreTabla());
+                    parametros.Add(NonQueries.Encuestas.ParametrosRespuestaPregunta(idRespuestaPregunta, respuestaEncuesta.Hash, respuesta));
+                    statements = EiffelService.ArmarStatements(parametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
+                }
 
-            if (preguntaContestada != null)
-            {
-                var parametrosUpdate = new List<(string tabla, List<(String, Object)> parametros, List<(String, Object)> filtros)>();
-                preguntaContestada.EncuestaPreguntaOpcionId = respuestaEncuesta.RespuestasPreguntas.First().EncuestaPreguntaOpcionId;
-                preguntaContestada.Valor = respuestaEncuesta.RespuestasPreguntas.First().Valor;
-                parametrosUpdate.Add(NonQueries.Encuestas.ParametrosUpdateRespuestaPregunta(preguntaContestada));
-                statements = EiffelService.ArmarStatementUpdate(parametrosUpdate, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
-            }
-            else
-            {
-                var parametros = new List<(string tabla, List<(String, Object, OdbcType)> parametros)>();
-                var idRespuestaPregunta = ProximoId(respuestaEncuesta.RespuestasPreguntas.First().NombreTabla());
-                parametros.Add(NonQueries.Encuestas.ParametrosRespuestaPregunta(idRespuestaPregunta, respuestaEncuesta.Hash, respuestaEncuesta.RespuestasPreguntas.First()));
-                statements = EiffelService.ArmarStatements(parametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
-            }
-
-            if (ultimaPregunta != null && respuestaEncuesta.RespuestasPreguntas.Any(rp => rp.EncuestaPreguntaId == ultimaPregunta.Id))
-            {
-                var logParametros = new List<(string tabla, List<(String, Object, OdbcType)> parametros)>();
-                logParametros.Add(GrabarLog(tipoId, numero));
-                var logStatement = EiffelService.ArmarStatements(logParametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
-                statements.AddRange(logStatement);
+                if (ultimaPregunta != null && respuesta.EncuestaPreguntaId == ultimaPregunta.Id)
+                {
+                    var logParametros = new List<(string tabla, List<(String, Object, OdbcType)> parametros)>();
+                    logParametros.Add(GrabarLog(tipoId, numero));
+                    var logStatement = EiffelService.ArmarStatements(logParametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
+                    statements.AddRange(logStatement);
+                }
             }
 
             resultado = EiffelService.SendTransactionToDBFDatabase(statements, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs);
