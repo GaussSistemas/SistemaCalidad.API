@@ -27,6 +27,7 @@ namespace SistemaDeCalidad.API.Controllers
         }
 
         [HttpGet(Name = "Get all messages")]
+        [AllowAnonymous]
         public async Task<ActionResult> Get()
         {
             try
@@ -41,12 +42,28 @@ namespace SistemaDeCalidad.API.Controllers
         }
 
         [HttpGet("GetAllForCustomerBusiness", Name = "Get all messages for customer business")]
+        [AllowAnonymous]
         public async Task<ActionResult> GetAllForCustomerCompany(string customerId, string companyId)
         {
             try
             {
                 var messages = await _service.GetAllMessagesForCustomerCompany(customerId, companyId).ConfigureAwait(false);
                 return Ok(_mapper.Map<List<MessageOutput>>(messages));
+            }
+            catch (BadHttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("MarkAsRead", Name = "Mark message as read")]
+        [AllowAnonymous]
+        public async Task<ActionResult> MarkAsRead(int messageId, string customerId, string companyId, string eiffelUserId, string eiffelUserName, bool dontShowAgain)
+        {
+            try
+            {
+                var message = await _service.MarkMessageAsRead(messageId, customerId, companyId, eiffelUserId, eiffelUserName, dontShowAgain).ConfigureAwait(false);
+                return Ok(_mapper.Map<MessageOutput>(message));
             }
             catch (BadHttpRequestException ex)
             {
@@ -85,6 +102,8 @@ namespace SistemaDeCalidad.API.Controllers
         }
 
         [HttpGet("User", Name = "Get message for user")]
+        [AllowAnonymous]
+
         public async Task<ActionResult> GetMessageForUser(string customerId, string companyId, string eiffelUserId)
         {
             try
@@ -96,6 +115,36 @@ namespace SistemaDeCalidad.API.Controllers
                 return Ok(_mapper.Map<MessageOutput>(message));
             }
             catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        [HttpPost("Comment", Name = "Create comment")]
+        public async Task<ActionResult> CreateComment(int messageId, string comment)
+        {
+            try
+            {
+                var createdComment = await _service.CreateComment(messageId, comment);
+                return Created(createdComment.Id.ToString(), _mapper.Map<MessageCommentOutput>(createdComment));
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        [HttpPut("Comment", Name = "Update comment")]
+        public async Task<ActionResult> UpdateComment(int messageId, int commentId, string comment)
+        {
+            try
+            {
+                var message = await _service.UpdateComment(messageId, commentId, comment).ConfigureAwait(false);
+                return Ok(_mapper.Map<List<MessageOutput>>(message));
+            }
+            catch (BadHttpRequestException ex)
             {
 
                 throw;

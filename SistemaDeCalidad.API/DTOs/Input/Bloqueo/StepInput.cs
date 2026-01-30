@@ -3,5 +3,6 @@
     public class StepInput
     {
         public string Name { get; set; }
+        public bool SistemBlocked { get; set; }
     }
 }

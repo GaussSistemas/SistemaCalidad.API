@@ -11,10 +11,45 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
         private readonly SistemaDeCalidadContext _context;
         private readonly int _loggedInUserId;
         private readonly int rejectedStepId = 6;
+        private readonly int blockedStep = 3;
         public MessagesService(SistemaDeCalidadContext context, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
-            _loggedInUserId = int.Parse(httpContextAccessor.HttpContext.User.LoggedInUserId());
+            int.TryParse(httpContextAccessor.HttpContext.User.LoggedInUserId(), out var result);
+            _loggedInUserId = result;
+        }
+
+        public async Task<MessageComment> CreateComment(int messageId, string comment)
+        {
+            var message = await _context.Messages
+                .AsNoTracking()
+                .Where(m => m.Id == messageId)
+                .FirstOrDefaultAsync();
+
+            var newComment = new MessageComment()
+            {
+                Comment = comment,
+                MessageId = messageId,
+                StepId = message.StepId,
+                UserId = _loggedInUserId
+            };
+
+            var createdComment = _context.MessagesComments.Add(newComment);
+
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+            return createdComment.Entity;
+        }
+
+        public async Task<MessageComment> UpdateComment(int messageId, int commentId, string comment)
+        {
+            var messageComment = await _context.MessagesComments.Where(mc => mc.MessageId == messageId && mc.Id == commentId).FirstOrDefaultAsync();
+            if (messageComment == null)
+                throw new BadHttpRequestException("El comentario no existe para el mensaje indicado.");
+
+            messageComment.Comment = comment;
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            return messageComment;
         }
 
         public async Task<Message> CreateMessage(Message newMessage)
@@ -22,14 +57,14 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
             var messagesForPeriod = await _context.Messages
                 .Include(m => m.Step)
                 .AsNoTracking()
-                .Where(m => m.CustomerId == newMessage.CustomerId && m.CompanyId == newMessage.CompanyId && 
-                        m.MessageTypeId == newMessage.MessageTypeId && m.Step.Id != rejectedStepId && 
-                        ((m.Immediately || 
-                        (m.StartDate.HasValue && newMessage.StartDate.HasValue && m.StartDate.Value.Date <= newMessage.StartDate.Value.Date && 
-                        m.EndDate.HasValue && newMessage.EndDate.HasValue && m.EndDate.Value >= newMessage.EndDate)) ||
-                        (newMessage.Immediately ||
-                        (m.StartDate.HasValue && newMessage.StartDate.HasValue && m.StartDate.Value.Date <= newMessage.StartDate.Value.Date &&
-                        m.EndDate.HasValue && newMessage.EndDate.HasValue && m.EndDate.Value >= newMessage.EndDate))))
+                .Where(m => m.CustomerId == newMessage.CustomerId && m.CompanyId == newMessage.CompanyId &&
+                        m.MessageTypeId == newMessage.MessageTypeId && m.Step.Id != rejectedStepId &&
+                        (
+                        (m.Immediately && !m.EndDate.HasValue) ||
+                        (m.Immediately && newMessage.EndDate.HasValue && m.EndDate.Value.Date >= newMessage.EndDate.Value.Date) ||
+                        (m.StartDate.HasValue && newMessage.StartDate.HasValue && m.StartDate.Value.Date <= newMessage.StartDate.Value.Date) &&
+                        m.EndDate.HasValue && newMessage.EndDate.HasValue && m.EndDate.Value >= newMessage.EndDate.Value.Date)
+                      )
                 .ToListAsync()
                 .ConfigureAwait(false);
 
@@ -51,7 +86,13 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
 
         public async Task<List<Message>> GetAllMessages()
         {
-            var messages = await _context.Messages.AsNoTracking().ToListAsync().ConfigureAwait(false);
+            var messages = await _context.Messages
+                .Include(x => x.MessageType)
+                .Include(x => x.Step)
+                .Include(x => x.MessageUsers)
+                .AsNoTracking()
+                .ToListAsync()
+                .ConfigureAwait(false);
             return messages;
         }
 
@@ -59,6 +100,9 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
         {
             var messages = await _context.Messages
                 .AsNoTracking()
+                .Include(msg => msg.MessageType)
+                .Include(msg => msg.Step)
+                .Include(msg => msg.MessageUsers)
                 .Where(m => m.CustomerId == customerId && m.CompanyId == companyId)
                 .ToListAsync()
                 .ConfigureAwait(false);
@@ -68,16 +112,50 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
 
         public async Task<Message> GetMessageForEiffelUser(string customerId, string companyId, string eiffelUserId)
         {
-            var message = await _context.Messages.AsNoTracking()
+            var comparissonDate = DateTime.Now.Date;
+
+            var message = await _context.Messages
+                .AsNoTracking()
                 .Include(m => m.MessageViews)
                 .Include(m => m.MessageUsers)
                 .Include(m => m.Step)
-                .Where(m => m.CustomerId == customerId && m.CompanyId == companyId && m.Step.ForUser &&
-                ((m.StartDate.HasValue && m.StartDate.Value.Date <= DateTime.UtcNow.Date && m.EndDate.HasValue && m.EndDate.Value.Date >= DateTime.UtcNow.Date) || m.Immediately) &&
-                m.MessageUsers.Any(mu => mu.EiffelUserId == eiffelUserId) &&
-                !m.MessageViews.Any(mv => mv.EiffelUserId == eiffelUserId))
+                .Include(m => m.MessageType)
+                .Where
+                (m => m.CustomerId == customerId && m.CompanyId == companyId && m.Step.ForUser && m.Step.Id == blockedStep ||
+                (m.CustomerId == customerId && m.CompanyId == companyId && m.Step.ForUser &&
+                (m.Immediately || (m.StartDate.HasValue && m.StartDate.Value <= comparissonDate && m.EndDate.HasValue && m.EndDate.Value > comparissonDate)) &&
+                (m.MessageUsers.Any(mu => mu.EiffelUserId == eiffelUserId) &&
+                !m.MessageViews.Any(mv => mv.EiffelUserId == eiffelUserId && mv.DontShowAgain) ||
+                 m.Step.Id == blockedStep))
+                )
                 .FirstOrDefaultAsync()
                 .ConfigureAwait(false);
+
+            return message;
+        }
+
+        public async Task<Message> MarkMessageAsRead(int messageId, string customerId, string companyId, string eiffelUserId, string eiffelUserName, bool dontShowAgain)
+        {
+            var message = await _context.Messages
+                .Include(m => m.MessageUsers)
+                .AsNoTracking()
+                .Where(m => m.Id == messageId && m.CustomerId == customerId && m.CompanyId == companyId && m.MessageUsers.Any(mu => mu.EiffelUserId == eiffelUserId))
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
+
+            if (message == null)
+                throw new BadHttpRequestException("El mensaje no existe para el cliente, empresa y usuario indicado.");
+
+            var newMessageRead = new MessageView()
+            {
+                DontShowAgain = dontShowAgain,
+                EiffelUserId = eiffelUserId,
+                EiffelUserName = eiffelUserName,
+                MessageId = messageId
+            };
+
+            var createdMessageRead = _context.MessagesViews.Add(newMessageRead);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
 
             return message;
         }
@@ -101,7 +179,7 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
                 StepTo = stepId
             };
             message.StepId = stepId;
-            message.MessageLogs.Add(log); 
+            message.MessageLogs.Add(log);
 
             await _context.SaveChangesAsync().ConfigureAwait(false);
 

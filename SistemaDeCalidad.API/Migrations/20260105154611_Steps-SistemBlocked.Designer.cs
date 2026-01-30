@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SistemaDeCalidad.API.Persistence.Context;
@@ -11,9 +12,11 @@ using SistemaDeCalidad.API.Persistence.Context;
 namespace SistemaDeCalidad.API.Migrations
 {
     [DbContext(typeof(SistemaDeCalidadContext))]
-    partial class SistemaDeCalidadContextModelSnapshot : ModelSnapshot
+    [Migration("20260105154611_Steps-SistemBlocked")]
+    partial class StepsSistemBlocked
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,14 +63,6 @@ namespace SistemaDeCalidad.API.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Text")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Theme")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");
 

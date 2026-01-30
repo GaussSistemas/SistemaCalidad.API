@@ -9,5 +9,8 @@ namespace SistemaDeCalidad.API.Interfaces.Services.Bloqueo
         Task<Message> GetMessageForEiffelUser(string customerId, string companyId, string eiffelUserId);
         Task<Message> CreateMessage(Message newMessage);
         Task<Message> UpdateMessage(int messageId, int stepId);
+        Task<Message> MarkMessageAsRead(int messageId, string customerId, string companyId, string eiffelUserId, string eiffelUserName, bool dontShowAgain);
+        Task<MessageComment> CreateComment(int messageId, string comment);
+        Task<MessageComment> UpdateComment(int messageId, int commentId, string comment);
     }
 }

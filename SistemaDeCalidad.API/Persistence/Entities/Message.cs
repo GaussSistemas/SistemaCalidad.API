@@ -9,12 +9,16 @@ namespace SistemaDeCalidad.API.Persistence.Entities
         public MessageType MessageType { get; set; }
         public string CustomerId { get; set; }
         public string CompanyId { get; set; }
+        [Column(TypeName = "timestamp without time zone")]
         public DateTime? StartDate { get; set; }
+        [Column(TypeName = "timestamp without time zone")]
         public DateTime? EndDate { get; set; }
         public bool Immediately { get; set; }
         public int StepId { get; set; }
         public Step Step { get; set; }
         public string Text { get; set; }
+        public string Theme { get; set; }
+        public string Title { get; set; }
         public List<MessageComment> MessageComments { get; set; }
         public List<MessageUser> MessageUsers { get; set; }
         public List<MessageLog> MessageLogs { get; set; }
