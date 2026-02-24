@@ -56,6 +56,12 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
             return messageComment;
         }
 
+        public async Task<List<MessageComment>> GetMessageComments(int messageId)
+        {
+            var messageComments = await _context.MessagesComments.AsNoTracking().Where(mc => mc.MessageId == messageId).ToListAsync();
+            return messageComments;
+        }
+
         public async Task<Message> CreateMessage(Message newMessage)
         {
             var messagesForPeriod = await _context.Messages

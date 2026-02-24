@@ -149,5 +149,20 @@ namespace SistemaDeCalidad.API.Controllers
                 throw;
             }
         }
+
+        [HttpGet("MessageComments", Name = "Message Comments")]
+        public async Task<ActionResult> GetMessageComments(int messageId)
+        {
+            try
+            {
+                var message = await _service.GetMessageComments(messageId).ConfigureAwait(false);
+                return Ok(_mapper.Map<List<MessageOutput>>(message));
+            }
+            catch (BadHttpRequestException ex)
+            {
+
+                throw;
+            }
+        }
     }
 }

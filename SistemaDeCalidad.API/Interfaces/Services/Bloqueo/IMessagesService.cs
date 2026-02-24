@@ -12,5 +12,6 @@ namespace SistemaDeCalidad.API.Interfaces.Services.Bloqueo
         Task<Message> MarkMessageAsRead(int messageId, string customerId, string companyId, string eiffelUserId, string eiffelUserName, bool dontShowAgain);
         Task<MessageComment> CreateComment(int messageId, string comment);
         Task<MessageComment> UpdateComment(int messageId, int commentId, string comment);
+        Task<List<MessageComment>> GetMessageComments(int messageId);
     }
 }
