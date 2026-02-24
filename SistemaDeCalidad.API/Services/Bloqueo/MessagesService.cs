@@ -11,7 +11,11 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
         private readonly SistemaDeCalidadContext _context;
         private readonly int _loggedInUserId;
         private readonly int rejectedStepId = 6;
-        private readonly int blockedStep = 3;
+        private readonly int blockedStepId = 3;
+        private readonly int blockedMessageTypeId = 3;
+        private readonly int warningMessageTypeId = 1;
+        private readonly int communicationMessageTypeId = 2;
+        private readonly int authorizedStepId = 2;
         public MessagesService(SistemaDeCalidadContext context, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
@@ -112,7 +116,7 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
 
         public async Task<Message> GetMessageForEiffelUser(string customerId, string companyId, string eiffelUserId)
         {
-            var comparissonDate = DateTime.Now.Date;
+            var comparissonDate = DateTime.Now.Date.AddDays(1);
 
             var message = await _context.Messages
                 .AsNoTracking()
@@ -120,16 +124,59 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
                 .Include(m => m.MessageUsers)
                 .Include(m => m.Step)
                 .Include(m => m.MessageType)
+                .Where(m => m.CustomerId == customerId && m.CompanyId.ToUpper() == companyId.ToUpper() && m.StepId == blockedStepId).
+                FirstOrDefaultAsync();
+
+            if (message == null)
+            {
+                message = await _context.Messages
+                .AsNoTracking()
+                .Include(m => m.MessageViews)
+                .Include(m => m.MessageUsers)
+                .Include(m => m.Step)
+                .Include(m => m.MessageType)
                 .Where
-                (m => m.CustomerId == customerId && m.CompanyId == companyId && m.Step.ForUser && m.Step.Id == blockedStep ||
-                (m.CustomerId == customerId && m.CompanyId == companyId && m.Step.ForUser &&
-                (m.Immediately || (m.StartDate.HasValue && m.StartDate.Value <= comparissonDate && m.EndDate.HasValue && m.EndDate.Value > comparissonDate)) &&
-                (m.MessageUsers.Any(mu => mu.EiffelUserId == eiffelUserId) &&
-                !m.MessageViews.Any(mv => mv.EiffelUserId == eiffelUserId && mv.DontShowAgain) ||
-                 m.Step.Id == blockedStep))
+                (m =>
+                    ((m.CustomerId == customerId && m.CompanyId.ToUpper() == companyId.ToUpper() && m.StepId == blockedStepId) ||
+                     (m.CustomerId == customerId && m.CompanyId.ToUpper() == companyId.ToUpper() && m.Step.ForUser && m.StartDate.HasValue && m.StartDate.Value < comparissonDate &&
+                      m.EndDate.HasValue && m.EndDate.Value < comparissonDate && m.MessageTypeId == warningMessageTypeId && m.StepId == authorizedStepId))
+                ||
+                (
+                    m.CustomerId == customerId && m.CompanyId == companyId && m.Step.ForUser &&
+                    (m.Immediately || (m.StartDate.HasValue && m.StartDate.Value <= comparissonDate && m.EndDate.HasValue && m.EndDate.Value > comparissonDate)) &&
+                    m.MessageUsers.Any(mu => mu.EiffelUserId == eiffelUserId) 
+                )
                 )
                 .FirstOrDefaultAsync()
                 .ConfigureAwait(false);
+            }
+
+            if (message != null)
+            {
+                if ((message.MessageTypeId == warningMessageTypeId && message.MessageViews.Any(mv => mv.EiffelUserId == eiffelUserId && mv.DontShowAgain && mv.Created.Date == comparissonDate)) ||
+                    (message.MessageTypeId == communicationMessageTypeId && message.MessageViews.Any(mv => mv.EiffelUserId == eiffelUserId && mv.DontShowAgain)))
+                    message = null;
+
+            }
+
+            if (message != null && message.EndDate.HasValue && message.EndDate.Value.Date < comparissonDate && message.MessageTypeId == warningMessageTypeId)
+            {
+                var blockedMessageType = await _context.MessagesTypes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(mt => mt.Id == blockedMessageTypeId)
+                .ConfigureAwait(false);
+
+                var blockedStep = await _context.Steps.FirstOrDefaultAsync(step => step.Id == blockedStepId).ConfigureAwait(false);
+
+                // Actualizar estado a bloqueado
+                var updatedMessage = await UpdateMessage(message.Id, blockedStepId).ConfigureAwait(false);
+
+                // Poner la información del mensaje de bloqueo
+                message.Step = blockedStep ?? message.Step;
+                message.Text = blockedMessageType?.Template ?? message.Text;
+                message.MessageType = blockedMessageType ?? message.MessageType;
+
+            }
 
             return message;
         }
@@ -173,11 +220,13 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
             var originalStep = message.StepId;
             var log = new MessageLog()
             {
-                UserId = _loggedInUserId,
+                UserId = _loggedInUserId != 0 ? _loggedInUserId : 3,
                 Action = "Actualización de mensaje",
                 StepFrom = originalStep,
                 StepTo = stepId
             };
+            if (stepId == blockedStepId)
+                message.MessageTypeId = blockedMessageTypeId;
             message.StepId = stepId;
             message.MessageLogs.Add(log);
 

@@ -27,7 +27,10 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
 
         public async Task<AccessToken> CreateToken(Login credentials)
         {
-            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email.ToUpper() == credentials.Email.ToUpper()).ConfigureAwait(false);
+            var user = await _context.Users.AsNoTracking()
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Email.ToUpper() == credentials.Email.ToUpper()).ConfigureAwait(false);
+
             if (user == null)
                 throw new BadHttpRequestException("Usuario o contraseña incorrectos."); 
             

@@ -92,7 +92,7 @@ namespace SistemaDeCalidad.API.Controllers
             try
             {
                 var message = await _service.UpdateMessage(messageId, stepId).ConfigureAwait(false);
-                return Ok(_mapper.Map < List<MessageOutput>>(message));
+                return Ok(_mapper.Map<MessageOutput>(message));
             }
             catch (BadHttpRequestException ex)
             {
@@ -103,7 +103,6 @@ namespace SistemaDeCalidad.API.Controllers
 
         [HttpGet("User", Name = "Get message for user")]
         [AllowAnonymous]
-
         public async Task<ActionResult> GetMessageForUser(string customerId, string companyId, string eiffelUserId)
         {
             try

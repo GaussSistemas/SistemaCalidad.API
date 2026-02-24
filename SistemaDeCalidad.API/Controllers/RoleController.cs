@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaDeCalidad.API.DTOs.Input.Bloqueo;
 using SistemaDeCalidad.API.DTOs.Output.Bloqueo;
@@ -8,6 +10,8 @@ namespace SistemaDeCalidad.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+
     public class RoleController : ControllerBase
     {
         private readonly ILogger<RoleController> _logger;
@@ -48,6 +52,20 @@ namespace SistemaDeCalidad.API.Controllers
             {
 
                 throw;
+            }
+        }
+
+        [HttpGet(Name = "User role")]
+        public async Task<ActionResult> UserRole()
+        {
+            try
+            {
+                var userRole = await _service.GetUserRole().ConfigureAwait(false);
+                return Ok(_mapper.Map<RoleOutput>(userRole));
+            }
+            catch (BadHttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
     }

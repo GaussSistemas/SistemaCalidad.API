@@ -8,7 +8,9 @@ namespace SistemaDeCalidad.API.Mapping.Bloqueo
         {
             CreateMap<Persistence.Entities.Message, DTOs.Output.Bloqueo.MessageOutput>()
                 .ForMember(dest => dest.MessageUsers, src => src.MapFrom(opt => opt.MessageUsers.Select(mu => mu.EiffelUserId).ToList()))
-                .ForMember(dest => dest.SistemBlocked, src => src.MapFrom(opt => opt.Step != null ? opt.Step.SistemBlocked : false));
+                .ForMember(dest => dest.SistemBlocked, src => src.MapFrom(opt => opt.Step != null ? opt.Step.SistemBlocked : false))
+                .ForMember(dest => dest.Theme, src => src.MapFrom(opt => opt.MessageType != null ? opt.MessageType.Theme : ""))
+                .ForMember(dest => dest.Title, src => src.MapFrom(opt => opt.MessageType != null ? opt.MessageType.Title : ""));
             CreateMap<Persistence.Entities.MessageComment, DTOs.Output.Bloqueo.MessageCommentOutput>();
 
             CreateMap<DTOs.Input.Bloqueo.MessageInput, Persistence.Entities.Message>()

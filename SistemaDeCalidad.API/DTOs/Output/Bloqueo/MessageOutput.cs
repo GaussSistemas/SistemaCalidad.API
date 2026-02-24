@@ -1,6 +1,6 @@
 ﻿namespace SistemaDeCalidad.API.DTOs.Output.Bloqueo
 {
-    public class    MessageOutput
+    public class MessageOutput
     {
         public int Id { get; set; }
         public int MessageTypeId { get; set; }
