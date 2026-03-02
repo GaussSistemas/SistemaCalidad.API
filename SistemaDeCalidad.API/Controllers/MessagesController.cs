@@ -28,11 +28,11 @@ namespace SistemaDeCalidad.API.Controllers
 
         [HttpGet(Name = "Get all messages")]
         [AllowAnonymous]
-        public async Task<ActionResult> Get()
+        public async Task<ActionResult> Get([FromQuery] DateTime? since, [FromQuery] DateTime? to)
         {
             try
             {
-                var messages = await _service.GetAllMessages().ConfigureAwait(false);
+                var messages = await _service.GetMessages(since, to).ConfigureAwait(false);
                 return Ok(_mapper.Map<List<MessageOutput>>(messages));
             }
             catch (BadHttpRequestException ex)
@@ -43,11 +43,11 @@ namespace SistemaDeCalidad.API.Controllers
 
         [HttpGet("GetAllForCustomerBusiness", Name = "Get all messages for customer business")]
         [AllowAnonymous]
-        public async Task<ActionResult> GetAllForCustomerCompany(string customerId, string companyId)
+        public async Task<ActionResult> GetAllForCustomerCompany(string customerId, string companyId, [FromQuery] DateTime? since, [FromQuery] DateTime? to)
         {
             try
             {
-                var messages = await _service.GetAllMessagesForCustomerCompany(customerId, companyId).ConfigureAwait(false);
+                var messages = await _service.GetMessagesForCustomerCompany(customerId, companyId, since, to).ConfigureAwait(false);
                 return Ok(_mapper.Map<List<MessageOutput>>(messages));
             }
             catch (BadHttpRequestException ex)
@@ -163,6 +163,13 @@ namespace SistemaDeCalidad.API.Controllers
 
                 throw;
             }
+        }
+
+        [HttpGet("MessageViews", Name = "Message Vies")]
+        public async Task<ActionResult> GetMessageViews(int messageId)
+        {
+            var messageViews = await _service.GetMessageViews(messageId).ConfigureAwait(false);
+            return Ok(_mapper.Map<List<MessageViewOutput>>(messageViews));
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SistemaDeCalidad.API.Helpers;
 using SistemaDeCalidad.API.Interfaces.Services.Bloqueo;
 using SistemaDeCalidad.API.Persistence.Context;
@@ -94,26 +95,32 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
             return createdMessage.Entity;
         }
 
-        public async Task<List<Message>> GetAllMessages()
+        public async Task<List<Message>> GetMessages(DateTime? since, DateTime? to)
         {
             var messages = await _context.Messages
                 .Include(x => x.MessageType)
                 .Include(x => x.Step)
                 .Include(x => x.MessageUsers)
+                .Where(x => 
+                    (since.HasValue ? (DateTime)x.EndDate.Value.Date >= since.Value.Date : true) &&
+                    (to.HasValue ? (DateTime)x.EndDate.Value.Date <= to.Value.Date : true))
                 .AsNoTracking()
                 .ToListAsync()
                 .ConfigureAwait(false);
             return messages;
         }
 
-        public async Task<List<Message>> GetAllMessagesForCustomerCompany(string customerId, string companyId)
+        public async Task<List<Message>> GetMessagesForCustomerCompany(string customerId, string companyId, DateTime? since, DateTime? to)
         {
             var messages = await _context.Messages
                 .AsNoTracking()
                 .Include(msg => msg.MessageType)
                 .Include(msg => msg.Step)
                 .Include(msg => msg.MessageUsers)
-                .Where(m => m.CustomerId == customerId && m.CompanyId == companyId)
+                .Where(m => m.CustomerId == customerId && m.CompanyId == companyId &&
+                    (since.HasValue ? (DateTime)m.EndDate.Value.Date >= since.Value.Date : true) &&
+                    (to.HasValue ? (DateTime)m.EndDate.Value.Date <= to.Value.Date : true)
+                )
                 .ToListAsync()
                 .ConfigureAwait(false);
 
@@ -122,7 +129,7 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
 
         public async Task<Message> GetMessageForEiffelUser(string customerId, string companyId, string eiffelUserId)
         {
-            var comparissonDate = DateTime.Now.Date.AddDays(1);
+            var comparissonDate = DateTime.Now.Date;
 
             var message = await _context.Messages
                 .AsNoTracking()
@@ -165,7 +172,11 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
 
             }
 
-            if (message != null && message.EndDate.HasValue && message.EndDate.Value.Date < comparissonDate && message.MessageTypeId == warningMessageTypeId)
+            var messageExpired = false;
+            if(message != null && message.EndDate.HasValue)
+                messageExpired = message.EndDate.Value.Date < comparissonDate;
+            
+            if (message != null && messageExpired && message.MessageTypeId == warningMessageTypeId)
             {
                 var blockedMessageType = await _context.MessagesTypes
                 .AsNoTracking()
@@ -239,6 +250,12 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
             await _context.SaveChangesAsync().ConfigureAwait(false);
 
             return message;
+        }
+
+        public async Task<List<MessageView>> GetMessageViews(int messageId)
+        {
+            var messageViews = await _context.MessagesViews.AsNoTracking().Where(mv => mv.MessageId == messageId).ToListAsync();
+            return messageViews;
         }
     }
 }
