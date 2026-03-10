@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaDeCalidad.API.Helpers;
 using SistemaDeCalidad.API.Interfaces.Services.Bloqueo;
@@ -166,6 +166,9 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
 
             if (message != null)
             {
+                if(message.MessageTypeId == warningMessageTypeId && message.EndDate.HasValue)
+                    message.Text += $"\r\n\r\n El sistema se bloqueará en {(message.EndDate.Value.Date - comparissonDate).Days} días";
+                
                 if ((message.MessageTypeId == warningMessageTypeId && message.MessageViews.Any(mv => mv.EiffelUserId == eiffelUserId && mv.DontShowAgain && mv.Created.Date == comparissonDate)) ||
                     (message.MessageTypeId == communicationMessageTypeId && message.MessageViews.Any(mv => mv.EiffelUserId == eiffelUserId && mv.DontShowAgain)))
                     message = null;
