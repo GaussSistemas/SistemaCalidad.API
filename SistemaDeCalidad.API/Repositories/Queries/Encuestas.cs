@@ -92,7 +92,7 @@
             return consulta;
 
         }
-        
+
         public static string EncuestaContestada(string hash)
         {
             var consulta = $"SELECT " +
@@ -146,6 +146,36 @@
                 $"id " +
                 $"FROM {tabla} " +
                 $"ORDER BY id DESC " +
+                $"TOP 1";
+
+            return consulta;
+        }
+
+        public static string RespuestaContestada(string hash, int preguntaId)
+        {
+            var consulta = $"SELECT " +
+                $"encuestasRespuestasPreguntas.id, " +
+                $"encuestasRespuestasPreguntas.hash, " +
+                $"encuestasRespuestasPreguntas.encuestaPreguntaId " +
+                $"FROM encuestasRespuestasPreguntas " +
+                $"WHERE " +
+                $"encuestasRespuestasPreguntas.hash = '{hash}' AND " +
+                $"encuestasRespuestasPreguntas.encuestaPreguntaId = {preguntaId}";
+
+            return consulta;
+        }
+
+        public static string UltimaPreguntaEncuesta(int encuestaId)
+        {
+            var consulta = $"SELECT " +
+                $"encuestasPreguntas.id, " +
+                $"encuestasPreguntas.encuestaId, " +
+                $"ALLTRIM(encuestasPreguntas.titulo) as titulo, " +
+                $"encuestasPreguntas.tipoControlId " +
+                $"FROM encuestasPreguntas " +
+                $"WHERE " +
+                $"encuestasPreguntas.encuestaId = {encuestaId} " +
+                $"ORDER BY encuestasPreguntas.id DESC " +
                 $"TOP 1";
 
             return consulta;

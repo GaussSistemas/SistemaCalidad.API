@@ -21,5 +21,6 @@ namespace SistemaDeCalidad.API.Interfaces.Repositories
         bool ActualizarOpcion(EncuestaPreguntaOpcion opcion);
         bool EncuestaConRespuestas(int id);
         bool EliminarEncuesta(Encuesta encuesta);
+        bool ActualizarRespuesta(EncuestaRespuesta respuestaEncuesta, string tipoId, int numero);
     }
 }
