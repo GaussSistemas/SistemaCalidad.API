@@ -166,7 +166,7 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
 
             if (message != null)
             {
-                if(message.MessageTypeId == warningMessageTypeId && message.EndDate.HasValue)
+                if(message.MessageTypeId == warningMessageTypeId && message.EndDate.HasValue && (message.EndDate.Value.Date - comparissonDate).Days > 0)
                     message.Text += $"\r\n\r\n El sistema se bloqueará en {(message.EndDate.Value.Date - comparissonDate).Days} días";
                 
                 if ((message.MessageTypeId == warningMessageTypeId && message.MessageViews.Any(mv => mv.EiffelUserId == eiffelUserId && mv.DontShowAgain && mv.Created.Date == comparissonDate)) ||

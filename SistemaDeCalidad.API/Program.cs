@@ -105,11 +105,11 @@ var app = builder.Build();
 var swaggerEnabled = builder.Configuration.GetValue<bool?>("Swagger:Enabled") ?? false;
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment() || swaggerEnabled)
-{
+//if (app.Environment.IsDevelopment() || swaggerEnabled)
+//{
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+//}
 app.UseHttpsRedirection();
 app.UseCors("TecSer");
 
