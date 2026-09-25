@@ -84,6 +84,32 @@ namespace SistemaDeCalidad.API.Repositories
             return opciones;
         }
 
+        public List<PreguntaAdicional> AdicionalesPreguntas(List<int> preguntasIds)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.AdicionalesPreguntas(preguntasIds),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var adicionales = EiffelService.SendToDBFDatabase<List<PreguntaAdicional>>(queryExecutor);
+            return adicionales;
+        }
+
+        public List<PreguntaAdicionalOpcion> OpcionesAdicionales(List<int> adicionalesIds)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.OpcionesAdicionales(adicionalesIds),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var opciones = EiffelService.SendToDBFDatabase<List<PreguntaAdicionalOpcion>>(queryExecutor);
+            return opciones;
+        }
+
         public EncuestaPreguntaOpcion OpcionSegunId(int id)
         {
             var queryExecutor = new QueryExecutor()
@@ -123,11 +149,24 @@ namespace SistemaDeCalidad.API.Repositories
             return respuesta;
         }
 
+        public EncuestaRespuestaAdicional RespuestaAdicional(string hash, int encuestaPreguntaId, int preguntaAdicionalId)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.RespuestaAdicionalContestada(hash, encuestaPreguntaId, preguntaAdicionalId),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var respuesta = EiffelService.SendToDBFDatabase<EncuestaRespuestaAdicional>(queryExecutor);
+            return respuesta;
+        }
+
         public EncuestaPregunta UltimaPreguntaEncuesta(int encuestaId)
         {
             var queryExecutor = new QueryExecutor()
             {
-                Consulta = Queries.Encuestas.UltimaPreguntaEncuesta(encuestaId, _sgcConfigurations.PreguntasExcluidasDeCierre),
+                Consulta = Queries.Encuestas.UltimaPreguntaEncuesta(encuestaId),
                 DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
                 URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
                 Parametros = new List<(string, object, OdbcType)>()
@@ -183,6 +222,17 @@ namespace SistemaDeCalidad.API.Repositories
                 parametros.Add(NonQueries.Encuestas.ParametrosRespuestaPregunta(idRespuestaPregunta, respuestaEncuesta.Hash, respuestaPregunta));
             }
 
+            var idRespuestaAdicional = 0;
+            foreach (var respuestaAdicional in respuestaEncuesta.RespuestasAdicionales ?? new List<EncuestaRespuestaAdicional>())
+            {
+                if (idRespuestaAdicional == 0)
+                    idRespuestaAdicional = ProximoId(respuestaAdicional.NombreTabla());
+                else
+                    idRespuestaAdicional++;
+
+                parametros.Add(NonQueries.Encuestas.ParametrosRespuestaAdicional(idRespuestaAdicional, respuestaEncuesta.Hash, respuestaAdicional));
+            }
+
             if (ultimaPregunta != null && respuestaEncuesta.RespuestasPreguntas.Any(rp => rp.EncuestaPreguntaId == ultimaPregunta.Id))
                 parametros.Add(GrabarLog(tipoId, numero));
 
@@ -221,6 +271,31 @@ namespace SistemaDeCalidad.API.Repositories
 
                     var parametros = new List<(string tabla, List<(String, Object, OdbcType)> parametros)>();
                     parametros.Add(NonQueries.Encuestas.ParametrosRespuestaPregunta(idRespuestaPregunta, respuestaEncuesta.Hash, respuesta));
+                    statements.AddRange(EiffelService.ArmarStatements(parametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs));
+                }
+            }
+
+            var idRespuestaAdicional = 0;
+            foreach (var respuesta in respuestaEncuesta.RespuestasAdicionales ?? new List<EncuestaRespuestaAdicional>())
+            {
+                var adicionalContestada = RespuestaAdicional(respuestaEncuesta.Hash, respuesta.EncuestaPreguntaId, respuesta.PreguntaAdicionalId);
+                if (adicionalContestada != null)
+                {
+                    var parametrosUpdate = new List<(string tabla, List<(String, Object)> parametros, List<(String, Object)> filtros)>();
+                    adicionalContestada.PreguntaAdicionalOpcionId = respuesta.PreguntaAdicionalOpcionId;
+                    adicionalContestada.Valor = respuesta.Valor;
+                    parametrosUpdate.Add(NonQueries.Encuestas.ParametrosUpdateRespuestaAdicional(adicionalContestada));
+                    statements.AddRange(EiffelService.ArmarStatementUpdate(parametrosUpdate, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs));
+                }
+                else
+                {
+                    if (idRespuestaAdicional == 0)
+                        idRespuestaAdicional = ProximoId(respuesta.NombreTabla());
+                    else
+                        idRespuestaAdicional++;
+
+                    var parametros = new List<(string tabla, List<(String, Object, OdbcType)> parametros)>();
+                    parametros.Add(NonQueries.Encuestas.ParametrosRespuestaAdicional(idRespuestaAdicional, respuestaEncuesta.Hash, respuesta));
                     statements.AddRange(EiffelService.ArmarStatements(parametros, _sgcConfigurations.SistemaDeCalidadQueryExecutorURL, _sgcConfigurations.SistemaDeCalidadDSNs));
                 }
             }

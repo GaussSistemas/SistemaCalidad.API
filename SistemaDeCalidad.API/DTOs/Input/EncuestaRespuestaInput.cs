@@ -7,5 +7,6 @@
         public string NombreUsuario { get; set; }
         public string ApellidoUsuario { get; set; }
         public List<EncuestaRespuestaPreguntaInput> RespuestasPreguntas { get; set; }
+        public List<EncuestaRespuestaAdicionalInput>? RespuestasAdicionales { get; set; }
     }
 }

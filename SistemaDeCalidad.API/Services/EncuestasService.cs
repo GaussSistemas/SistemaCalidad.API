@@ -210,6 +210,26 @@ namespace SistemaDeCalidad.API.Services
                     pregunta.Opciones = opcionesPregunta;
             }
 
+            // Preguntas adicionales: se muestran debajo de su pregunta, en la misma pantalla
+            var adicionales = _encuestasRepository.AdicionalesPreguntas(preguntas.Select(pregunta => pregunta.Id).ToList());
+            if (adicionales != null && adicionales.Any())
+            {
+                var opcionesAdicionales = _encuestasRepository.OpcionesAdicionales(adicionales.Select(adicional => adicional.Id).Distinct().ToList());
+                foreach (var adicional in adicionales)
+                {
+                    var opcionesAdicional = opcionesAdicionales?.Where(opcion => opcion.PreguntaAdicionalId == adicional.Id).ToList();
+                    if (opcionesAdicional != null && opcionesAdicional.Any())
+                        adicional.Opciones = opcionesAdicional;
+                }
+
+                foreach (var pregunta in preguntas)
+                {
+                    var adicionalesPregunta = adicionales.Where(adicional => adicional.EncuestaPreguntaId == pregunta.Id).ToList();
+                    if (adicionalesPregunta.Any())
+                        pregunta.Adicionales = adicionalesPregunta;
+                }
+            }
+
             return encuesta;
         }
 

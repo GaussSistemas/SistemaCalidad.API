@@ -8,6 +8,7 @@
         public string Titulo { get; set; }
         public int TipoControlId { get; set; }
         public List<EncuestaPreguntaOpcion>? Opciones { get; set; }
+        public List<PreguntaAdicional>? Adicionales { get; set; }
         public string NombreTabla() { return Tabla; }
 
     }

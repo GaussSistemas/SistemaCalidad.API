@@ -13,10 +13,13 @@ namespace SistemaDeCalidad.API.Mapping
             CreateMap<EncuestaTipoControl, EncuestaTipoControlOutput>();
             CreateMap<EncuestaPregunta,  EncuestaPreguntaOutput>();
             CreateMap<EncuestaPreguntaOpcion, EncuestaPreguntaOpcionOutput>();
+            CreateMap<PreguntaAdicional, PreguntaAdicionalOutput>();
+            CreateMap<PreguntaAdicionalOpcion, PreguntaAdicionalOpcionOutput>();
             CreateMap<EncuestaConSoporte, EncuestaConSoporteOutput>();
 
             CreateMap<EncuestaRespuestaInput, EncuestaRespuesta>();
             CreateMap<EncuestaRespuestaPreguntaInput, EncuestaRespuestaPregunta>();
+            CreateMap<EncuestaRespuestaAdicionalInput, EncuestaRespuestaAdicional>();
             CreateMap<EncuestaInput, Encuesta>(); 
             CreateMap<EncuestaPreguntaInput, EncuestaPregunta>();
             CreateMap<EncuestaPreguntaOpcionInput, EncuestaPreguntaOpcion>(); 
