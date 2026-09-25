@@ -165,8 +165,12 @@
             return consulta;
         }
 
-        public static string UltimaPreguntaEncuesta(int encuestaId)
+        public static string UltimaPreguntaEncuesta(int encuestaId, List<int> preguntasExcluidas)
         {
+            var filtroExcluidas = preguntasExcluidas != null && preguntasExcluidas.Count != 0 ?
+                $"AND encuestasPreguntas.id NOT IN ({string.Join(",", preguntasExcluidas)}) " :
+                "";
+
             var consulta = $"SELECT " +
                 $"encuestasPreguntas.id, " +
                 $"encuestasPreguntas.encuestaId, " +
@@ -175,6 +179,7 @@
                 $"FROM encuestasPreguntas " +
                 $"WHERE " +
                 $"encuestasPreguntas.encuestaId = {encuestaId} " +
+                $"{filtroExcluidas}" +
                 $"ORDER BY encuestasPreguntas.id DESC " +
                 $"TOP 1";
 
