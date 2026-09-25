@@ -9,6 +9,7 @@ namespace SistemaDeCalidad.API.DTOs.Output
         public string Titulo { get; set; }
         public int TipoControlId { get; set; }
         public List<EncuestaPreguntaOpcionOutput>? Opciones { get; set; }
+        public List<PreguntaAdicionalOutput>? Adicionales { get; set; }
         public EncuestaTipoControlOutput TipoControl { get; set; }
     }
 }

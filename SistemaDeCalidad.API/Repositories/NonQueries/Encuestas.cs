@@ -74,7 +74,24 @@ namespace SistemaDeCalidad.API.Repositories.NonQueries
             return (respuesta.NombreTabla(), parametros);
 
         }
-        
+
+        public static (string tabla, List<(string, object, OdbcType)> parametros) ParametrosRespuestaAdicional(int id, string hash, EncuestaRespuestaAdicional respuesta)
+        {
+            var parametros = new List<(String, object, OdbcType)>()
+            {
+                ("id", id, OdbcType.Int),
+                ("hash", $"'{hash}'", OdbcType.Text),
+                ("encuestaPreguntaId", respuesta.EncuestaPreguntaId, OdbcType.Int),
+                ("preguntaAdicionalId", respuesta.PreguntaAdicionalId, OdbcType.Int),
+                ("valor", $"'{respuesta.Valor}'", OdbcType.Text)
+            };
+
+            if (respuesta.PreguntaAdicionalOpcionId != 0)
+                parametros.Add(("preguntaAdicionalOpcionId", respuesta.PreguntaAdicionalOpcionId, OdbcType.Int));
+
+            return (respuesta.NombreTabla(), parametros);
+        }
+
         public static (string tabla, List<(string, object, OdbcType)> parametros) ParametrosLog(EncuestaLog log)
         {
             var parametros = new List<(String, object, OdbcType)>()
@@ -151,6 +168,25 @@ namespace SistemaDeCalidad.API.Repositories.NonQueries
                 ("Hash", $"'{respuesta.Hash}'"),
                 ("Id", respuesta.Id),
                 ("EncuestaPreguntaId", respuesta.EncuestaPreguntaId)  
+            };
+
+            return (respuesta.NombreTabla(), parametros, filtros);
+        }
+
+        public static (string tabla, List<(string, object)> parametros, List<(string, object)> filtros) ParametrosUpdateRespuestaAdicional(EncuestaRespuestaAdicional respuesta)
+        {
+            var parametros = new List<(string, object)>()
+            {
+                ("PreguntaAdicionalOpcionId", $"{respuesta.PreguntaAdicionalOpcionId}"),
+                ("Valor", $"'{respuesta.Valor}'"),
+            };
+
+            var filtros = new List<(string, object)>()
+            {
+                ("Hash", $"'{respuesta.Hash}'"),
+                ("Id", respuesta.Id),
+                ("EncuestaPreguntaId", respuesta.EncuestaPreguntaId),
+                ("PreguntaAdicionalId", respuesta.PreguntaAdicionalId)
             };
 
             return (respuesta.NombreTabla(), parametros, filtros);

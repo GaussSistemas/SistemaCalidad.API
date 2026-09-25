@@ -180,5 +180,71 @@
 
             return consulta;
         }
+
+        public static string AdicionalesPreguntas(List<int> preguntasIds)
+        {
+            if (preguntasIds != null && preguntasIds.Count != 0)
+            {
+                var filtro = preguntasIds.Count == 1 ?
+                    $"encuestasPreguntasAdicionales.encuestaPreguntaId = {preguntasIds.FirstOrDefault()}" :
+                    $"encuestasPreguntasAdicionales.encuestaPreguntaId IN ({string.Join(",", preguntasIds)})";
+
+                var consulta = $"SELECT " +
+                    $"preguntasAdicionales.id, " +
+                    $"preguntasAdicionales.encuestaId, " +
+                    $"encuestasPreguntasAdicionales.encuestaPreguntaId, " +
+                    $"encuestasPreguntasAdicionales.orden, " +
+                    $"ALLTRIM(preguntasAdicionales.titulo) as titulo, " +
+                    $"preguntasAdicionales.tipoControlId, " +
+                    $"preguntasAdicionales.obligatoria " +
+                    $"FROM encuestasPreguntasAdicionales " +
+                    $"INNER JOIN preguntasAdicionales ON preguntasAdicionales.id = encuestasPreguntasAdicionales.preguntaAdicionalId " +
+                    $"WHERE " +
+                    $"{filtro} " +
+                    $"ORDER BY encuestasPreguntasAdicionales.encuestaPreguntaId, encuestasPreguntasAdicionales.orden";
+
+                return consulta;
+            }
+            else
+                throw new ArgumentNullException("No se recibieron preguntas sobre las que buscar las adicionales");
+        }
+
+        public static string OpcionesAdicionales(List<int> adicionalesIds)
+        {
+            if (adicionalesIds != null && adicionalesIds.Count != 0)
+            {
+                var filtro = adicionalesIds.Count == 1 ?
+                    $"preguntasAdicionalesOpciones.preguntaAdicionalId = {adicionalesIds.FirstOrDefault()}" :
+                    $"preguntasAdicionalesOpciones.preguntaAdicionalId IN ({string.Join(",", adicionalesIds)})";
+
+                var consulta = $"SELECT " +
+                    $"preguntasAdicionalesOpciones.id, " +
+                    $"preguntasAdicionalesOpciones.preguntaAdicionalId, " +
+                    $"ALLTRIM(preguntasAdicionalesOpciones.opcion) as opcion " +
+                    $"FROM preguntasAdicionalesOpciones " +
+                    $"WHERE " +
+                    $"{filtro}";
+
+                return consulta;
+            }
+            else
+                throw new ArgumentNullException("No se recibieron preguntas adicionales sobre las que buscar las opciones");
+        }
+
+        public static string RespuestaAdicionalContestada(string hash, int encuestaPreguntaId, int preguntaAdicionalId)
+        {
+            var consulta = $"SELECT " +
+                $"encuestasRespuestasAdicionales.id, " +
+                $"encuestasRespuestasAdicionales.hash, " +
+                $"encuestasRespuestasAdicionales.encuestaPreguntaId, " +
+                $"encuestasRespuestasAdicionales.preguntaAdicionalId " +
+                $"FROM encuestasRespuestasAdicionales " +
+                $"WHERE " +
+                $"encuestasRespuestasAdicionales.hash = '{hash}' AND " +
+                $"encuestasRespuestasAdicionales.encuestaPreguntaId = {encuestaPreguntaId} AND " +
+                $"encuestasRespuestasAdicionales.preguntaAdicionalId = {preguntaAdicionalId}";
+
+            return consulta;
+        }
     }
 }

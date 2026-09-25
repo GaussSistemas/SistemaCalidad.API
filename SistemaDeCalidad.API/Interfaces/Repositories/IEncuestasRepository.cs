@@ -10,6 +10,8 @@ namespace SistemaDeCalidad.API.Interfaces.Repositories
         EncuestaPregunta PreguntaSegunId(int id); 
         List<EncuestaPregunta> PreguntasEncuesta(int encuestaId);
         List<EncuestaPreguntaOpcion> OpcionesPreguntas(List<int> preguntasIds);
+        List<PreguntaAdicional> AdicionalesPreguntas(List<int> preguntasIds);
+        List<PreguntaAdicionalOpcion> OpcionesAdicionales(List<int> adicionalesIds);
         EncuestaPreguntaOpcion OpcionSegunId(int id);
         List<EncuestaTipoControl> ControlesEncuestas();
         bool GrabarRespuesta(EncuestaRespuesta respuesta, string tipoId, int soporteNumero);
