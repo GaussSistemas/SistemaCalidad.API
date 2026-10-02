@@ -24,5 +24,9 @@ namespace SistemaDeCalidad.API.Interfaces.Repositories
         bool EncuestaConRespuestas(int id);
         bool EliminarEncuesta(Encuesta encuesta);
         bool ActualizarRespuesta(EncuestaRespuesta respuestaEncuesta, string tipoId, int numero);
+        EncuestaPregunta UltimaPreguntaEncuesta(int encuestaId);
+        EncuestaRespuesta CabeceraRespuesta(string hash);
+        List<EncuestaRespuestaPregunta> RespuestasPreguntas(string hash);
+        List<EncuestaRespuestaAdicional> RespuestasAdicionales(string hash);
     }
 }

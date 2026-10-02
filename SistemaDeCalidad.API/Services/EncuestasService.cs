@@ -8,10 +8,12 @@ namespace SistemaDeCalidad.API.Services
     {
         private readonly IEncuestasRepository _encuestasRepository;
         private readonly ISoportesService _soportesService;
-        public EncuestasService(IEncuestasRepository encuestasRepository, ISoportesService soportesService)
+        private readonly ICRMEncuestasService _crmEncuestasService;
+        public EncuestasService(IEncuestasRepository encuestasRepository, ISoportesService soportesService, ICRMEncuestasService crmEncuestasService)
         {
             _encuestasRepository = encuestasRepository;
             _soportesService = soportesService;
+            _crmEncuestasService = crmEncuestasService;
         }
 
         public async Task GrabarRespuestaEncuesta(EncuestaRespuesta respuesta)
@@ -38,6 +40,12 @@ namespace SistemaDeCalidad.API.Services
                 throw new IOException("No se pudo insertar la respuesta en la base de datos.");
 
             await _soportesService.FinalizarSoporte(respuesta.Hash);
+
+            // Dual record: la encuesta ya está grabada en la base legacy, que es
+            // la fuente de verdad. Esto es best-effort y nunca lanza, así que un
+            // CRM caído no puede hacer fallar la respuesta del cliente.
+            await _crmEncuestasService.PublicarSiFinalizo(respuesta, soporte, encuesta);
+
             return;
         }
 
@@ -60,6 +68,10 @@ namespace SistemaDeCalidad.API.Services
             var resultado = _encuestasRepository.ActualizarRespuesta(respuesta, soporte.TipoId, (int)soporte.Numero);
             if (!resultado)
                 throw new IOException("No se pudo insertar la respuesta en la base de datos.");
+
+            // Dual record: ver GrabarRespuestaEncuesta. Solo publica si este PUT
+            // contestó la última pregunta.
+            await _crmEncuestasService.PublicarSiFinalizo(respuesta, soporte, encuesta);
 
             return;
         }

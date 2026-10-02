@@ -162,6 +162,45 @@ namespace SistemaDeCalidad.API.Repositories
             return respuesta;
         }
 
+        public EncuestaRespuesta CabeceraRespuesta(string hash)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.EncuestaContestada(hash),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var cabecera = EiffelService.SendToDBFDatabase<EncuestaRespuesta>(queryExecutor);
+            return cabecera;
+        }
+
+        public List<EncuestaRespuestaPregunta> RespuestasPreguntas(string hash)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.RespuestasPreguntasSegunHash(hash),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var respuestas = EiffelService.SendToDBFDatabase<List<EncuestaRespuestaPregunta>>(queryExecutor);
+            return respuestas;
+        }
+
+        public List<EncuestaRespuestaAdicional> RespuestasAdicionales(string hash)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.RespuestasAdicionalesSegunHash(hash),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var respuestas = EiffelService.SendToDBFDatabase<List<EncuestaRespuestaAdicional>>(queryExecutor);
+            return respuestas;
+        }
+
         public EncuestaPregunta UltimaPreguntaEncuesta(int encuestaId)
         {
             var queryExecutor = new QueryExecutor()

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SistemaDeCalidad.API.Helpers.Logging;
 using SistemaDeCalidad.API.Interfaces.Repositories;
 using SistemaDeCalidad.API.Interfaces.Services;
 using SistemaDeCalidad.API.Interfaces.Services.Bloqueo;
@@ -13,6 +14,9 @@ using SistemaDeCalidad.API.Services;
 using SistemaDeCalidad.API.Services.Bloqueo;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Log a archivo (por defecto C:\Logs, configurable con "FileLogging:Carpeta").
+builder.Logging.AddProvider(new FileLoggerProvider(builder.Configuration["FileLogging:Carpeta"] ?? @"C:\Logs"));
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -50,6 +54,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.Configure<SistemaDeCalidadConfiguration>(builder.Configuration.GetSection("SistemaDeCalidadConfiguration"));
 builder.Services.Configure<JWTConfiguration>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<CRMConfiguration>(builder.Configuration.GetSection("CRMConfiguration"));
 builder.Services.AddDbContext<SistemaDeCalidadContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("SistemaDeCalidadDB")));
 
 builder.Services.AddCors(options =>
@@ -70,7 +75,15 @@ builder.Services.AddTransient<IStepsService, StepsService>();
 builder.Services.AddTransient<IMessagesTypesService, MessagesTypesService>();
 builder.Services.AddTransient<IMessagesService, MessagesService>();
 
-builder.Services.AddHttpContextAccessor(); 
+// Dual record de encuestas hacia el CRM.
+var crmConfiguration = builder.Configuration.GetSection("CRMConfiguration").Get<CRMConfiguration>() ?? new CRMConfiguration();
+builder.Services.AddHttpClient(CRMEncuestasService.HttpClientName, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(crmConfiguration.TimeoutSegundos > 0 ? crmConfiguration.TimeoutSegundos : 8);
+});
+builder.Services.AddTransient<ICRMEncuestasService, CRMEncuestasService>();
+
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.MapInboundClaims = false;
@@ -101,6 +114,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 
 var app = builder.Build();
+
+// Deja asentado en el log con qué configuración del CRM arrancó la API,
+// para poder diagnosticar el dual record en el servidor publicado.
+app.Logger.LogInformation(
+    "API iniciada. Entorno {Entorno}. CRM Habilitado {Habilitado} URL '{Url}' Token configurado {TieneToken} (largo {LargoToken}, solo ASCII {TokenAscii})",
+    app.Environment.EnvironmentName, crmConfiguration.Habilitado, crmConfiguration.IngestaURL,
+    !string.IsNullOrWhiteSpace(crmConfiguration.Token),
+    crmConfiguration.Token?.Trim().Length ?? 0, crmConfiguration.Token?.Trim().All(char.IsAscii) ?? true);
+
+// Si al publicar se pisa el appsettings.json del servidor, faltan estas claves
+// y todos los requests fallan. Mejor dejarlo explícito en el log.
+foreach (var clave in new[] { "Jwt:Key", "Jwt:Issuer", "Jwt:Audience", "ConnectionStrings:SistemaDeCalidadDB" })
+{
+    if (string.IsNullOrWhiteSpace(builder.Configuration[clave]))
+        app.Logger.LogCritical("Falta la configuración '{Clave}' (revisar el appsettings.json del servidor). La API no va a funcionar correctamente.", clave);
+}
 
 var swaggerEnabled = builder.Configuration.GetValue<bool?>("Swagger:Enabled") ?? false;
 

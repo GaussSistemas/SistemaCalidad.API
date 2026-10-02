@@ -11,6 +11,7 @@
                 $"cabecera.nombre as Tarea, " +
                 $"cabecera.id_cliente as clienteId, " +
                 $"cabecera.nombreClie as nombreCliente, " +
+                $"cabecera.mail_usuario as mailUsuario, " +
                 $"IIF(!EMPTY(cabecera.usuario), PADR(cabecera.usuario, 20, ' '), cabecera.usuariogenerico) as usuarioCliente, " +
                 $"cabecera.fecha, " +
                 $"cabecera.fe_cierra as fechaResolucion, " +
