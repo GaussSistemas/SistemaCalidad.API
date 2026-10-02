@@ -8,6 +8,7 @@
         public string ClienteId { get; set; }
         public string NombreCliente { get; set; }
         public string UsuarioCliente { get; set; }
+        public string MailUsuario { get; set; }
         public string Responsable { get; set; }
         public string Detalle { get; set; }
         public DateTime Fecha { get; set; }

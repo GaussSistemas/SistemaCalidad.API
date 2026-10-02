@@ -165,6 +165,37 @@
             return consulta;
         }
 
+        public static string RespuestasPreguntasSegunHash(string hash)
+        {
+            var consulta = $"SELECT " +
+                $"encuestasRespuestasPreguntas.id, " +
+                $"encuestasRespuestasPreguntas.hash, " +
+                $"encuestasRespuestasPreguntas.encuestaPreguntaId, " +
+                $"encuestasRespuestasPreguntas.encuestaPreguntaOpcionId, " +
+                $"encuestasRespuestasPreguntas.valor " +
+                $"FROM encuestasRespuestasPreguntas " +
+                $"WHERE " +
+                $"encuestasRespuestasPreguntas.hash = '{hash}'";
+
+            return consulta;
+        }
+
+        public static string RespuestasAdicionalesSegunHash(string hash)
+        {
+            var consulta = $"SELECT " +
+                $"encuestasRespuestasAdicionales.id, " +
+                $"encuestasRespuestasAdicionales.hash, " +
+                $"encuestasRespuestasAdicionales.encuestaPreguntaId, " +
+                $"encuestasRespuestasAdicionales.preguntaAdicionalId, " +
+                $"encuestasRespuestasAdicionales.preguntaAdicionalOpcionId, " +
+                $"encuestasRespuestasAdicionales.valor " +
+                $"FROM encuestasRespuestasAdicionales " +
+                $"WHERE " +
+                $"encuestasRespuestasAdicionales.hash = '{hash}'";
+
+            return consulta;
+        }
+
         public static string UltimaPreguntaEncuesta(int encuestaId)
         {
             var consulta = $"SELECT " +

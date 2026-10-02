@@ -8,10 +8,12 @@ namespace SistemaDeCalidad.API.Services
     {
         private readonly IEncuestasRepository _encuestasRepository;
         private readonly ISoportesService _soportesService;
-        public EncuestasService(IEncuestasRepository encuestasRepository, ISoportesService soportesService)
+        private readonly ICRMEncuestasService _crmEncuestasService;
+        public EncuestasService(IEncuestasRepository encuestasRepository, ISoportesService soportesService, ICRMEncuestasService crmEncuestasService)
         {
             _encuestasRepository = encuestasRepository;
             _soportesService = soportesService;
+            _crmEncuestasService = crmEncuestasService;
         }
 
         public async Task GrabarRespuestaEncuesta(EncuestaRespuesta respuesta)
@@ -38,6 +40,9 @@ namespace SistemaDeCalidad.API.Services
                 throw new IOException("No se pudo insertar la respuesta en la base de datos.");
 
             await _soportesService.FinalizarSoporte(respuesta.Hash);
+
+            await _crmEncuestasService.PublicarSiFinalizo(respuesta, soporte, encuesta);
+
             return;
         }
 
@@ -60,6 +65,8 @@ namespace SistemaDeCalidad.API.Services
             var resultado = _encuestasRepository.ActualizarRespuesta(respuesta, soporte.TipoId, (int)soporte.Numero);
             if (!resultado)
                 throw new IOException("No se pudo insertar la respuesta en la base de datos.");
+
+            await _crmEncuestasService.PublicarSiFinalizo(respuesta, soporte, encuesta);
 
             return;
         }
@@ -210,7 +217,6 @@ namespace SistemaDeCalidad.API.Services
                     pregunta.Opciones = opcionesPregunta;
             }
 
-            // Preguntas adicionales: se muestran debajo de su pregunta, en la misma pantalla
             var adicionales = _encuestasRepository.AdicionalesPreguntas(preguntas.Select(pregunta => pregunta.Id).ToList());
             if (adicionales != null && adicionales.Any())
             {

@@ -162,6 +162,45 @@ namespace SistemaDeCalidad.API.Repositories
             return respuesta;
         }
 
+        public EncuestaRespuesta CabeceraRespuesta(string hash)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.EncuestaContestada(hash),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var cabecera = EiffelService.SendToDBFDatabase<EncuestaRespuesta>(queryExecutor);
+            return cabecera;
+        }
+
+        public List<EncuestaRespuestaPregunta> RespuestasPreguntas(string hash)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.RespuestasPreguntasSegunHash(hash),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var respuestas = EiffelService.SendToDBFDatabase<List<EncuestaRespuestaPregunta>>(queryExecutor);
+            return respuestas;
+        }
+
+        public List<EncuestaRespuestaAdicional> RespuestasAdicionales(string hash)
+        {
+            var queryExecutor = new QueryExecutor()
+            {
+                Consulta = Queries.Encuestas.RespuestasAdicionalesSegunHash(hash),
+                DSNs = _sgcConfigurations.SistemaDeCalidadDSNs,
+                URL = _sgcConfigurations.SistemaDeCalidadQueryExecutorURL,
+                Parametros = new List<(string, object, OdbcType)>()
+            };
+            var respuestas = EiffelService.SendToDBFDatabase<List<EncuestaRespuestaAdicional>>(queryExecutor);
+            return respuestas;
+        }
+
         public EncuestaPregunta UltimaPreguntaEncuesta(int encuestaId)
         {
             var queryExecutor = new QueryExecutor()
@@ -248,8 +287,6 @@ namespace SistemaDeCalidad.API.Repositories
 
             var statements = new List<(string statement, List<(string, object, OdbcType)> parametros)>();
             var resultado = false;
-            // Los inserts van todos en la misma transacción: el id se pide una vez y se incrementa,
-            // igual que en GrabarRespuesta, para que no se repita.
             var idRespuestaPregunta = 0;
             foreach (var respuesta in respuestaEncuesta.RespuestasPreguntas)
             {
