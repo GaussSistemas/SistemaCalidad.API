@@ -1,7 +1,5 @@
 namespace SistemaDeCalidad.API.Models.Encuestas
 {
-    // Pregunta que se muestra en la misma pantalla, debajo de una pregunta de la encuesta.
-    // Se arma una instancia por cada relación en EncuestasPreguntasAdicionales.
     public class PreguntaAdicional
     {
         private string Tabla { get; } = "PreguntasAdicionales";

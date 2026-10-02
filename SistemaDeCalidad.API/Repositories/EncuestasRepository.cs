@@ -287,8 +287,6 @@ namespace SistemaDeCalidad.API.Repositories
 
             var statements = new List<(string statement, List<(string, object, OdbcType)> parametros)>();
             var resultado = false;
-            // Los inserts van todos en la misma transacción: el id se pide una vez y se incrementa,
-            // igual que en GrabarRespuesta, para que no se repita.
             var idRespuestaPregunta = 0;
             foreach (var respuesta in respuestaEncuesta.RespuestasPreguntas)
             {

@@ -20,8 +20,6 @@ namespace SistemaDeCalidad.API.Services
 
         private const int MaximoCaracteresBodyEnLog = 500;
 
-        // Valores de campo_crm en encuesta_mapeo_preguntas (mismo nombre que
-        // la propiedad del payload, en camelCase).
         private const string CampoAtencion = "atencion";
         private const string CampoTiempoRespuesta = "tiempoRespuesta";
         private const string CampoRespuestaClara = "respuestaClara";
@@ -30,10 +28,6 @@ namespace SistemaDeCalidad.API.Services
         private const string CampoResuelto = "resuelto";
         private const string CampoComentario = "comentario";
 
-        /// <summary>
-        /// Si falta alguno de estos en el mapeo no se publica. "resuelto" no está
-        /// porque la encuesta V2 no lo pregunta: sin fila, viaja en null.
-        /// </summary>
         private static readonly string[] CamposRequeridos =
         {
             CampoAtencion, CampoTiempoRespuesta, CampoRespuestaClara,
@@ -60,6 +54,7 @@ namespace SistemaDeCalidad.API.Services
             _logger = logger;
         }
 
+        /// <summary>Publishes the survey to the CRM once its last question is answered. Never throws.</summary>
         public async Task<bool> PublicarSiFinalizo(EncuestaRespuesta respuesta, Soporte soporte, Encuesta encuesta)
         {
             try
@@ -77,8 +72,6 @@ namespace SistemaDeCalidad.API.Services
                     return false;
                 }
 
-                // Mismo criterio que el log "ENCUESTA FINALIZADA" del repositorio:
-                // la encuesta termina cuando se contesta su última pregunta.
                 var ultimaPregunta = _encuestasRepository.UltimaPreguntaEncuesta(respuesta.EncuestaId);
                 var finalizo = ultimaPregunta != null &&
                     (respuesta.RespuestasPreguntas ?? new List<EncuestaRespuestaPregunta>())
@@ -108,8 +101,6 @@ namespace SistemaDeCalidad.API.Services
             }
             catch (Exception ex)
             {
-                // Red de seguridad final: el dual record JAMÁS puede tumbar la
-                // encuesta, que ya está grabada en la base legacy.
                 _logger.LogError(ex, "Error inesperado publicando la encuesta en el CRM. Hash {Hash}", respuesta?.Hash);
                 return false;
             }
@@ -118,8 +109,6 @@ namespace SistemaDeCalidad.API.Services
         private EncuestaCRMOutput ArmarPayload(EncuestaRespuesta respuesta, Soporte soporte, Encuesta encuesta,
             Dictionary<string, CRMMapeoPreguntaInput> mapeo)
         {
-            // Al finalizar, el request solo trae las últimas preguntas: lo que se
-            // contestó antes vino en otros POST/PUT. Por eso se lee todo lo grabado.
             var cabecera = _encuestasRepository.CabeceraRespuesta(respuesta.Hash) ?? respuesta;
             var respuestas = _encuestasRepository.RespuestasPreguntas(respuesta.Hash);
             if (respuestas == null || respuestas.Count == 0)
@@ -131,8 +120,6 @@ namespace SistemaDeCalidad.API.Services
                 .Where(fila => !EsAdicional(fila))
                 .Select(fila => BuscarRespuesta(respuestas, fila.EncuestaPreguntaId)));
 
-            // Una fila con pregunta_adicional_id es una repregunta: su respuesta
-            // vive en encuestasRespuestasAdicionales y no en las preguntas comunes.
             string? Valor(string campo)
             {
                 if (!mapeo.TryGetValue(campo, out var fila))
@@ -220,15 +207,10 @@ namespace SistemaDeCalidad.API.Services
 
             var nombre = string.Join(" ", partes);
 
-            // Si quien respondió no dejó su nombre, al menos mandamos el usuario
-            // que tenía asociado el ticket.
             return string.IsNullOrWhiteSpace(nombre) ? soporte?.UsuarioCliente?.Trim() : nombre;
         }
 
-        /// <summary>
-        /// Resuelve de una sola consulta las opciones de las preguntas mapeadas
-        /// que vinieron sin texto. Si todas traen Valor, no cuesta ninguna.
-        /// </summary>
+        /// <summary>Loads in a single query the options of mapped answers that have no text value.</summary>
         private List<EncuestaPreguntaOpcion> ResolverOpciones(IEnumerable<EncuestaRespuestaPregunta?> mapeadas)
         {
             var preguntasIds = mapeadas
@@ -238,7 +220,6 @@ namespace SistemaDeCalidad.API.Services
                 .Distinct()
                 .ToList();
 
-            // OpcionesPreguntas tira ArgumentNullException con la lista vacía.
             if (preguntasIds.Count == 0)
                 return new List<EncuestaPreguntaOpcion>();
 
@@ -270,19 +251,13 @@ namespace SistemaDeCalidad.API.Services
             return opcion.Opcion?.Trim();
         }
 
+        /// <summary>Formats the response date and time as ISO 8601 with the configured UTC offset.</summary>
         private string FormatearFechaHora(EncuestaRespuesta respuesta)
         {
             var hora = respuesta.Hora;
             if (hora < TimeSpan.Zero || hora >= TimeSpan.FromDays(1))
                 hora = respuesta.Fecha.TimeOfDay;
 
-            // Fecha trae componente horario propio (sale de DateTime.Now en el
-            // inicializador del modelo, porque el Input no manda fecha), así que
-            // hay que descartarlo con .Date antes de sumarle Hora.
-            //
-            // SpecifyKind(Unspecified) es obligatorio: el ctor de DateTimeOffset
-            // tira ArgumentException si el Kind es Local y el offset no coincide
-            // con el de la máquina — y en un server en UTC reventaría siempre.
             var local = DateTime.SpecifyKind(respuesta.Fecha.Date.Add(hora), DateTimeKind.Unspecified);
             var offset = TimeSpan.FromHours(_crmConfiguration.OffsetHorasUTC);
 
@@ -290,15 +265,9 @@ namespace SistemaDeCalidad.API.Services
                 .ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
         }
 
-        /// <summary>
-        /// Lee el mapeo de preguntas del CRM (GET /api/encuestas/mapeo, tabla
-        /// encuesta_mapeo_preguntas). Se pide en cada publicación, sin cache, así
-        /// un cambio en la tabla rige desde la próxima encuesta. Devuelve null si
-        /// no se pudo obtener: en ese caso no se publica.
-        /// </summary>
+        /// <summary>Fetches the question-to-field mapping from the CRM; returns null if it can't be retrieved.</summary>
         private async Task<Dictionary<string, CRMMapeoPreguntaInput>?> ObtenerMapeo(string? hash)
         {
-            // El GET vive al lado de la ingesta: …/api/encuestas/ingesta → …/api/encuestas/mapeo.
             const string sufijoIngesta = "/ingesta";
             var ingestaURL = _crmConfiguration.IngestaURL!.Trim().TrimEnd('/');
             if (!ingestaURL.EndsWith(sufijoIngesta, StringComparison.OrdinalIgnoreCase))
@@ -354,18 +323,12 @@ namespace SistemaDeCalidad.API.Services
             }
         }
 
-        /// <summary>
-        /// El token va por request y no pegado al handler, así rotarlo no
-        /// obliga a reciclar nada más que la configuración. Devuelve false si
-        /// el token no se puede mandar.
-        /// </summary>
+        /// <summary>Adds the bearer token to the request; returns false if the token is invalid.</summary>
         private bool AgregarToken(HttpRequestMessage request, string? hash, string payloadParaLog)
         {
             if (string.IsNullOrWhiteSpace(_crmConfiguration.Token))
                 return true;
 
-            // Los headers HTTP solo aceptan ASCII: un caracter invisible
-            // pegado en el appsettings rompe el envío con un error poco claro.
             var token = _crmConfiguration.Token.Trim();
             if (!token.All(char.IsAscii))
             {
@@ -395,9 +358,6 @@ namespace SistemaDeCalidad.API.Services
                 if (!AgregarToken(request, payload.OrigenHash, PayloadParaLog(json)))
                     return false;
 
-                // CancellationToken.None a propósito: si el cliente cierra el
-                // browser apenas manda la encuesta no queremos perder el push.
-                // El Timeout del HttpClient ya acota cuánto puede tardar.
                 using var response = await client.SendAsync(request, CancellationToken.None);
                 cronometro.Stop();
 
@@ -431,8 +391,6 @@ namespace SistemaDeCalidad.API.Services
 
         private string PayloadParaLog(string json)
         {
-            // Sin cola ni reintentos, este log es la única forma de recuperar a
-            // mano una encuesta que el CRM no recibió.
             return _crmConfiguration.LoguearPayloadEnFallo ? $" Payload {json}" : string.Empty;
         }
 

@@ -15,14 +15,9 @@ using SistemaDeCalidad.API.Services.Bloqueo;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Log a archivo (por defecto C:\Logs, configurable con "FileLogging:Carpeta").
 builder.Logging.AddProvider(new FileLoggerProvider(builder.Configuration["FileLogging:Carpeta"] ?? @"C:\Logs"));
 
-// Add services to the container.
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -36,7 +31,6 @@ builder.Services.AddSwaggerGen(c =>
         BearerFormat = "JWT"
     });
 
-    // 2. Require the scheme globally (applies to all endpoints)
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -75,7 +69,6 @@ builder.Services.AddTransient<IStepsService, StepsService>();
 builder.Services.AddTransient<IMessagesTypesService, MessagesTypesService>();
 builder.Services.AddTransient<IMessagesService, MessagesService>();
 
-// Dual record de encuestas hacia el CRM.
 var crmConfiguration = builder.Configuration.GetSection("CRMConfiguration").Get<CRMConfiguration>() ?? new CRMConfiguration();
 builder.Services.AddHttpClient(CRMEncuestasService.HttpClientName, client =>
 {
@@ -115,16 +108,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 
 var app = builder.Build();
 
-// Deja asentado en el log con qué configuración del CRM arrancó la API,
-// para poder diagnosticar el dual record en el servidor publicado.
 app.Logger.LogInformation(
     "API iniciada. Entorno {Entorno}. CRM Habilitado {Habilitado} URL '{Url}' Token configurado {TieneToken} (largo {LargoToken}, solo ASCII {TokenAscii})",
     app.Environment.EnvironmentName, crmConfiguration.Habilitado, crmConfiguration.IngestaURL,
     !string.IsNullOrWhiteSpace(crmConfiguration.Token),
     crmConfiguration.Token?.Trim().Length ?? 0, crmConfiguration.Token?.Trim().All(char.IsAscii) ?? true);
 
-// Si al publicar se pisa el appsettings.json del servidor, faltan estas claves
-// y todos los requests fallan. Mejor dejarlo explícito en el log.
 foreach (var clave in new[] { "Jwt:Key", "Jwt:Issuer", "Jwt:Audience", "ConnectionStrings:SistemaDeCalidadDB" })
 {
     if (string.IsNullOrWhiteSpace(builder.Configuration[clave]))
@@ -133,12 +122,8 @@ foreach (var clave in new[] { "Jwt:Key", "Jwt:Issuer", "Jwt:Audience", "Connecti
 
 var swaggerEnabled = builder.Configuration.GetValue<bool?>("Swagger:Enabled") ?? false;
 
-// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment() || swaggerEnabled)
-//{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-//}
+app.UseSwagger();
+app.UseSwaggerUI();
 app.UseHttpsRedirection();
 app.UseCors("TecSer");
 

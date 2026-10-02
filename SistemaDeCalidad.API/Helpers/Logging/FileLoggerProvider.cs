@@ -3,11 +3,6 @@ using System.Text;
 
 namespace SistemaDeCalidad.API.Helpers.Logging
 {
-    /// <summary>
-    /// Logger a archivo sin dependencias externas. Escribe un archivo por día
-    /// (SistemaDeCalidad-yyyyMMdd.log) en la carpeta configurada. Respeta los
-    /// filtros de "Logging:LogLevel" igual que la consola.
-    /// </summary>
     public sealed class FileLoggerProvider : ILoggerProvider
     {
         private readonly string _carpeta;
@@ -23,8 +18,6 @@ namespace SistemaDeCalidad.API.Helpers.Logging
             }
             catch
             {
-                // Si no se puede crear la carpeta, Escribir va a fallar en silencio:
-                // el logging nunca debe tumbar la aplicación.
             }
         }
 
@@ -43,7 +36,6 @@ namespace SistemaDeCalidad.API.Helpers.Logging
             }
             catch
             {
-                // Idem: sin permisos o disco lleno no puede romper el request.
             }
         }
 

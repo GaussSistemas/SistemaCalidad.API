@@ -188,10 +188,8 @@ namespace SistemaDeCalidad.API.Services.Bloqueo
 
                 var blockedStep = await _context.Steps.FirstOrDefaultAsync(step => step.Id == blockedStepId).ConfigureAwait(false);
 
-                // Actualizar estado a bloqueado
                 var updatedMessage = await UpdateMessage(message.Id, blockedStepId).ConfigureAwait(false);
 
-                // Poner la información del mensaje de bloqueo
                 message.Step = blockedStep ?? message.Step;
                 message.Text = blockedMessageType?.Template ?? message.Text;
                 message.MessageType = blockedMessageType ?? message.MessageType;

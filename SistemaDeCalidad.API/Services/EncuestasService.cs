@@ -41,9 +41,6 @@ namespace SistemaDeCalidad.API.Services
 
             await _soportesService.FinalizarSoporte(respuesta.Hash);
 
-            // Dual record: la encuesta ya está grabada en la base legacy, que es
-            // la fuente de verdad. Esto es best-effort y nunca lanza, así que un
-            // CRM caído no puede hacer fallar la respuesta del cliente.
             await _crmEncuestasService.PublicarSiFinalizo(respuesta, soporte, encuesta);
 
             return;
@@ -69,8 +66,6 @@ namespace SistemaDeCalidad.API.Services
             if (!resultado)
                 throw new IOException("No se pudo insertar la respuesta en la base de datos.");
 
-            // Dual record: ver GrabarRespuestaEncuesta. Solo publica si este PUT
-            // contestó la última pregunta.
             await _crmEncuestasService.PublicarSiFinalizo(respuesta, soporte, encuesta);
 
             return;
@@ -222,7 +217,6 @@ namespace SistemaDeCalidad.API.Services
                     pregunta.Opciones = opcionesPregunta;
             }
 
-            // Preguntas adicionales: se muestran debajo de su pregunta, en la misma pantalla
             var adicionales = _encuestasRepository.AdicionalesPreguntas(preguntas.Select(pregunta => pregunta.Id).ToList());
             if (adicionales != null && adicionales.Any())
             {
